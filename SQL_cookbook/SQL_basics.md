@@ -6,6 +6,7 @@
   SELECT
   FROM
   WHERE
+  WINDOW_Function
   GROUP BY
   HAVING
   ORDER BY
@@ -224,7 +225,7 @@ If a query can ben written using window function, use window function. Although 
 
 ### Window Functions
 
-* Note: Window Functions outputs are not allowed in `WHERE` clause, use subquery instead
+* Note: Window Functions outputs are not allowed in `WHERE` clause because it execute after the where clause, need to use subquery
 * Functions: `AVG()`, `SUM()`,  `MAX()`, `MIN()`, `COUNT()`, `ROW_NUMBER()`, `RANK()`, `DENSE_RANK()`, `NTILE()`
 
 - Show each sales average for Group, Country, and Region all in one query

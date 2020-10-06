@@ -542,12 +542,152 @@ The result should be displayed by 'Id' ascending, and then by 'Month' descending
 
 #### Solution
 * window function
-* `ROW BETWEEN ... AND PROCEEDING`
+* `ROW BETWEEN n preceding AND current row`
 
 ```sql
+with no_recent_month as
+(
+    select
+        Id,
+        Month,
+        Salary
+    from
+    (
+        select
+            Id,
+            Month,
+            Salary,
+            row_number() over (partition by Id order by Month desc) as rn
+        from Employee
+    ) a
+    where rn <> 1
+)
+
 select
-	id,
-	month,
-	sum(Salary) over (partition by Id order by Month ROWS between -1 and proceeding) as Salary)
-from Employee
+    Id,
+    Month,
+    sum(Salary) over (partition by Id order by Month rows between 2 preceding and current row) as Salary
+from no_recent_month
+group by Id, Month
+order by Id, Month desc
+```
+
+### Calculate Median without using building function
+The Employee table holds all employees. The employee table has three columns: Employee Id, Company Name, and Salary.
+
+```bash
++-----+------------+--------+
+|Id   | Company    | Salary |
++-----+------------+--------+
+|1    | A          | 2341   |
+|2    | A          | 341    |
+|3    | A          | 15     |
+|4    | A          | 15314  |
+|5    | A          | 451    |
+|6    | A          | 513    |
+|7    | B          | 15     |
+|8    | B          | 13     |
+|9    | B          | 1154   |
+|10   | B          | 1345   |
+|11   | B          | 1221   |
+|12   | B          | 234    |
+|13   | C          | 2345   |
+|14   | C          | 2645   |
+|15   | C          | 2645   |
+|16   | C          | 2652   |
+|17   | C          | 65     |
++-----+------------+--------+
+Write a SQL query to find the median salary of each company. Bonus points if you can solve it without using any built-in SQL functions.
+
++-----+------------+--------+
+|Id   | Company    | Salary |
++-----+------------+--------+
+|5    | A          | 451    |
+|6    | A          | 513    |
+|12   | B          | 234    |
+|9    | B          | 1154   |
+|14   | C          | 2645   |
++-----+------------+--------+
+```
+
+#### Solution
+* Window function
+
+```sql
+-- solution 1 step by step non-optimized
+with counts as
+(
+   select
+       Company,
+       count(Salary) as counts
+    from Employee
+    group by 1
+),
+
+median as
+(
+    select
+        Company,
+        case when counts%2 = 0 then counts/2 else ceiling(counts/2) end as median_rows
+    from counts
+    union
+    select
+        Company,
+        case when counts%2 = 0 then counts/2+1 else ceiling(counts/2) end as median_rows
+    from counts
+),
+
+row_n as
+(
+    select
+        Id,
+        Company,
+        Salary,
+        row_number() over (partition by Company order by Salary) as row_n
+    from Employee
+)
+
+select
+    a.Id,
+    a.Company,
+    a.Salary
+from row_n a
+join median b on a.Company = b.Company and a.row_n = b.median_rows
+
+-- solution 2 Optimized version solution 1
+With ranks as
+(
+    Select
+        id,
+        company,
+        salary,
+        count(Company) over (partition by company order by salary rows between unbounded preceding and unbounded following) as count_emp,
+        row_number() over(partition by Company) as row_rank
+    from Employee
+)
+
+select
+    id,
+    company,
+    salary
+from ranks
+where (count_emp%2 = 1 and row_rank = round(count_emp/2,0))
+or (count_emp%2 = 0 and row_rank in (count_emp/2, count_emp/2 + 1))
+
+-- solution 3 using the property of Median
+select
+    Id,
+    Company,
+    Salary
+from
+(
+    select
+        *,
+        cast(row_number() over (partition by Company order by Salary asc) as signed) as rn_asc,
+        cast( row_number() over (partition by Company order by Salary desc) as signed) as rn_desc
+    from Employee
+) a
+where abs(rn_asc - rn_desc) <= 1
+order by Company, Salary
+
 ```
