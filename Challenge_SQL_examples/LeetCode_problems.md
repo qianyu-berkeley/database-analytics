@@ -691,3 +691,122 @@ where abs(rn_asc - rn_desc) <= 1
 order by Company, Salary
 
 ```
+
+### Caculate median base on frequency of numbers
+
+```bash
+The Numbers table keeps the value of number and its frequency.
++----------+-------------+
+|  Number  |  Frequency  |
++----------+-------------|
+|  0       |  7          |
+|  1       |  1          |
+|  2       |  3          |
+|  3       |  1          |
++----------+-------------+
+In this table, the numbers are 0, 0, 0, 0, 0, 0, 0, 1, 2, 2, 2, 3, so the median is (0 + 0) / 2 = 0.
+
++--------+
+| median |
++--------|
+| 0.0000 |
++--------+
+Write a query to find the median of all numbers and name the result as median.
+```
+
+#### Solution
+
+```sql
+with cte as
+(
+   select
+       Number,
+       Frequency,
+       sum(Frequency) over (order by Number rows between unbounded preceding and current row) - frequency + 1 as range_start,
+       sum(Frequency) over (order by Number rows between unbounded preceding and current row) as range_end
+   from Numbers
+),
+
+median_position as
+(
+    select
+        case
+            when sum(frequency)%2 = 1 then ceil(sum(frequency)/2)
+            else sum(frequency)/2 end as median_location
+    from Numbers
+    union
+    select
+        case
+            when sum(frequency)%2 = 1 then ceil(sum(frequency)/2)
+            else sum(frequency)/2+1 end as median_location
+    from Numbers
+)
+
+select
+    avg(Number) as median
+from cte c
+join median_position m
+where m.median_location between range_start and range_end
+```
+
+### Consecutivee Row Selection
+X city built a new stadium, each day many people visit it and the stats are saved as these columns: id, visit_date, people
+
+Please write a query to display the records which have 3 or more consecutive rows and the amount of people more than 100(inclusive).
+
+```bash
+For example, the table stadium:
++------+------------+-----------+
+| id   | visit_date | people    |
++------+------------+-----------+
+| 1    | 2017-01-01 | 10        |
+| 2    | 2017-01-02 | 109       |
+| 3    | 2017-01-03 | 150       |
+| 4    | 2017-01-04 | 99        |
+| 5    | 2017-01-05 | 145       |
+| 6    | 2017-01-06 | 1455      |
+| 7    | 2017-01-07 | 199       |
+| 8    | 2017-01-08 | 188       |
++------+------------+-----------+
+For the sample data above, the output is:
+
++------+------------+-----------+
+| id   | visit_date | people    |
++------+------------+-----------+
+| 5    | 2017-01-05 | 145       |
+| 6    | 2017-01-06 | 1455      |
+| 7    | 2017-01-07 | 199       |
+| 8    | 2017-01-08 | 188       |
++------+------------+-----------+
+Note:
+Each day only have one row record, and the dates are increasing with id increasing.
+```
+#### Solution
+
+```sql
+-- User (id - row_number) of generate label of consective row label
+with cte as
+(
+    SELECT
+        id,
+        visit_date,
+        people,
+        id - ROW_NUMBER() OVER(ORDER BY id) AS rn
+    FROM stadium
+    WHERE people >= 100
+)
+
+select
+    id,
+    visit_date,
+    people
+from cte
+where rn in
+(
+    select
+        rn
+    from cte
+    group by rn
+    having count(visit_date) >= 3
+)
+```

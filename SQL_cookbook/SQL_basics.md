@@ -12,6 +12,10 @@
   ORDER BY
   ```
 
+### Column alias
+- Can use the alias in GROUP BY, ORDER BY, or HAVING clauses to refer to the column:
+- Can Not use in where clause, case statement
+
 ### `Having` vs `WHERE`
 - Where clause cannot be used with `group by`
 - User `having` to filter aggregated columns
@@ -276,6 +280,13 @@ SELECT duration_seconds,
  WHERE start_time < '2012-01-08'
  order by 1 desc
 ```
+
+- Frame Clause
+  - For aggregate functions, the frame clause further refines the set of rows in a function's window when using ORDER BY. It enables you to include or exclude sets of rows within the ordered result. The frame clause consists of the ROWS keyword and associated specifiers.
+
+  - The frame clause doesn't apply to `ranking` functions. Also, the frame clause isn't required when no ORDER BY clause is used in the OVER clause for an aggregate function. **If an ORDER BY clause is used for an aggregate function, an explicit frame clause is required.**
+
+  - When no ORDER BY clause is specified, the implied frame is unbounded, equivalent to ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING.
 
 ### `COALESCE(exp1, exp2, ...)` return the first non-null expression and NVL() is an older function serves the same purpose
   ```sql
