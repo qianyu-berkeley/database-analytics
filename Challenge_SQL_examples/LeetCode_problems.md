@@ -810,3 +810,152 @@ where rn in
     having count(visit_date) >= 3
 )
 ```
+
+### Averge employee salary
+Given two tables as below, write a query to display the comparison result (higher/lower/same) of the average salary of employees in a department to the company's average salary.
+
+```bash
+Table: salary
+| id | employee_id | amount | pay_date   |
+|----|-------------|--------|------------|
+| 1  | 1           | 9000   | 2017-03-31 |
+| 2  | 2           | 6000   | 2017-03-31 |
+| 3  | 3           | 10000  | 2017-03-31 |
+| 4  | 1           | 7000   | 2017-02-28 |
+| 5  | 2           | 6000   | 2017-02-28 |
+| 6  | 3           | 8000   | 2017-02-28 |
+
+
+The employee_id column refers to the employee_id in the following table employee.
+
+
+| employee_id | department_id |
+|-------------|---------------|
+| 1           | 1             |
+| 2           | 2             |
+| 3           | 2             |
+
+
+So for the sample data above, the result is:
+
+
+| pay_month | department_id | comparison  |
+|-----------|---------------|-------------|
+| 2017-03   | 1             | higher      |
+| 2017-03   | 2             | lower       |
+| 2017-02   | 1             | same        |
+| 2017-02   | 2             | same        |
+
+```
+
+__Explanation__
+
+In March, the company's average salary is (9000+6000+10000)/3 = 8333.33...
+
+
+The average salary for department '1' is 9000, which is the salary of employee_id '1' since there is only one employee in this department. So the comparison result is 'higher' since 9000 > 8333.33 obviously.
+
+
+The average salary of department '2' is (6000 + 10000)/2 = 8000, which is the average of employee_id '2' and '3'. So the comparison result is 'lower' since 8000 < 8333.33.
+
+
+With he same formula for the average salary comparison in February, the result is 'same' since both the department '1' and '2' have the same average salary with the company, which is 7000.
+
+#### Solution
+* `CTE`
+* `join`
+* `case statement`
+
+```sql
+-- get company average
+with company_avg as
+(
+        select
+            left(pay_date, 7) as pay_month,
+            avg(amount) as avg_salary
+        from salary
+        group by 1
+        order by 1 desc
+),
+
+-- get department average
+department_avg as
+(
+    select
+        department_id,
+        left(pay_date, 7) as pay_month,
+        avg(amount) as avg_salary
+    from
+    (
+        select
+            e.department_id,
+            s.pay_date,
+            s.amount
+        from salary s
+        join employee e on s.employee_id = e.employee_id
+    ) a
+    group by 1, 2
+)
+
+-- Join with case statement
+select
+    da.pay_month,
+    da.department_id,
+    case when da.avg_salary > ca.avg_salary then 'higher'
+         when da.avg_salary < ca.avg_salary then 'lower'
+         else 'same' end as comparison
+from department_avg da
+join company_avg ca on da.pay_month = ca.pay_month
+order by 1 desc, 2
+```
+
+### Students Report By Geography
+
+A U.S graduate school has students from Asia, Europe and America. The students' location information are stored in table student as below.
+
+```bash
+| name   | continent |
+|--------|-----------|
+| Jack   | America   |
+| Pascal | Europe    |
+| Xi     | Asia      |
+| Jane   | America   |
+
+
+Pivot the continent column in this table so that each name is sorted alphabetically and displayed underneath its corresponding continent. The output headers should be America, Asia and Europe respectively. It is guaranteed that the student number from America is no less than either Asia or Europe.
+
+
+For the sample input, the output is:
+
+
+| America | Asia | Europe |
+|---------|------|--------|
+| Jack    | Xi   | Pascal |
+| Jane    |      |        |
+```
+
+Follow-up: If it is unknown which continent has the most students, can you write a query to generate the student report?
+
+#### Solution
+* `case statement`
+* Use `row_number()` and `group by`
+* Alternative, we can create a table of each column and do outer join using row number
+
+```sql
+with cte as
+(
+    select
+        case when continent = 'America' then name else NULL end as America,
+        case when continent = 'Europe' then name else NULL end as Europe,
+        case when continent = 'Asia' then name else NULL end as Asia,
+        row_number() over (partition by continent order by name) as rn
+    from student
+)
+
+select
+    max(America) as America,
+    max(Asia) as Asia,
+    max(Europe) as Europe
+from cte
+group by rn
+```
