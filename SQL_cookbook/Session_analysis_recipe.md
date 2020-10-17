@@ -2,11 +2,14 @@
 
 ### Construct sessions from raw event log data without log-in / log-out events labels
 * raw event log contain colums: `user_id`, `event_time`, `event_name` but there is not event name indicate user log-in and log-out
+* `lag()`, `lead()`
 * Generate session end flag based on time gap
 * Apply window function to create session_number and session_step
+* Note: if the timestamp is in date, we can use islands and gaps approach, i.e., for any consecutive increments of days, the difference between the row number and days are the same.
 
 ```sql
 --If use idle for more than 10 mins, session ends
+-- method 1. use rolling sum to create session number
 with session_label as
 (
       select
@@ -23,7 +26,6 @@ with session_label as
           from raw_sessions
       )
 )
-
 select
       user_id,
       event_time,
@@ -32,6 +34,23 @@ select
       session_num,
       row_number() over (partition by user_id, session_num order by event_time) as session_step
 from session_label
+
+-- Get session start_time, session end_time
+select
+    user_id,
+    lag(event_time) over (partition by user_id order by event_time) as session_start,
+    event_time as session_end,
+    case when lead_time_laps > 10 then 1.0 else 0.0 end as session_end_flag
+from
+(
+    select
+        user_id,
+        event_time,
+        datediff('min', event_time, lead(event_time) over (partition by user_id order by event_time)) as lead_time_laps
+    from raw_sessions
+)
+where session_end_flag = 1
+order by user_id, session_start
 ```
 
 ### Cohort Engagement Analysis (Using Yammer data from `mode.com`)

@@ -13,8 +13,9 @@
   ```
 
 ### Column alias
-- Can use the alias in GROUP BY, ORDER BY, or HAVING clauses to refer to the column:
-- Can Not use in where clause, case statement
+- This is database technology dependent, in general
+  - **Redshift** support lateral column alias
+  - **MySQL** support column alias in `GROUP BY`, `ORDER BY`, or `HAVING` clauses, not in `WHERE` clause
 
 ### `Having` vs `WHERE`
 - Where clause cannot be used with `group by`
@@ -230,7 +231,8 @@ If a query can ben written using window function, use window function. Although 
 ### Window Functions
 
 * Note: Window Functions outputs are not allowed in `WHERE` clause because it execute after the where clause, need to use subquery
-* Functions: `AVG()`, `SUM()`,  `MAX()`, `MIN()`, `COUNT()`, `ROW_NUMBER()`, `RANK()`, `DENSE_RANK()`, `NTILE()`
+* Functions: `AVG()`, `SUM()`,  `MAX()`, `MIN()`, `COUNT()`, `ROW_NUMBER()`, `RANK()`, `DENSE_RANK()`, `NTILE()`, etc
+  * `AVG()`, `SUM()`,  `MAX()`, `MIN()`, `COUNT()`, `NITLE()`, `First_value()`, `Last_value()`: If order by clause is used, need to define frame clause
 
 - Show each sales average for Group, Country, and Region all in one query
   ```sql
